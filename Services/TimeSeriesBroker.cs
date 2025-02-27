@@ -1,4 +1,4 @@
-﻿namespace OpenEventStream;
+﻿namespace OpenEventStream.Services;
 
 using System;
 using System.Collections;
@@ -20,48 +20,36 @@ public sealed class TimeSeriesBroker<T> : ITimeSeriesBroker<T>
         _timeSeriesCollection.TryAdd(_options.DefaultTopic, new TimeSeries<T>());
     }
 
-    public ITimeSeries<T> GetOrCreate()
+    public ITimeSeries<T> GetOrCreate(string? topic = null)
     {
-        return GetOrCreate(_options.DefaultTopic);
-    }
-
-    public ITimeSeries<T> GetOrCreate(string topic)
-    {
+        topic ??= _options.DefaultTopic;
         return _timeSeriesCollection.GetOrAdd(topic, new TimeSeries<T>());
     }
 
-    public void Add(T value)
+    public bool TryAdd(T value)
     {
-        Add(value, _options.DefaultTopic);
+        return TryAdd(null, value);
     }
 
-    public void Add(T value, string topic)
+    public bool TryAdd(string? topic, T value)
     {
         var timeSeries = GetOrCreate(topic);
-        timeSeries.Add(value);
+        return timeSeries.TryAdd(value);
     }
 
-    public IList<T> RemoveExpired()
+    public IList<T> RemoveExpired(string? topic = null, TimeSpan? expiryThreshold = null, TimeSpan? lockTimeout = null)
     {
-        return RemoveExpired(TimeSpan.Zero, _options.DefaultTopic);
-    }
-
-    public IList<T> RemoveExpired(TimeSpan threshold)
-    {
-        return RemoveExpired(threshold, _options.DefaultTopic);
-    }
-
-    public IList<T> RemoveExpired(TimeSpan threshold, string topic)
-    {
+        topic ??= _options.DefaultTopic;
         if (_timeSeriesCollection.TryGetValue(topic, out var timeSeries))
         {
-            return timeSeries.RemoveExpired(threshold);
+            return timeSeries.RemoveExpired(expiryThreshold, lockTimeout);
         }
         return Array.Empty<T>();
     }
 
-    public bool TryGetTimeSeries(string topic, [MaybeNullWhen(false)] out ITimeSeries<T> timeSeries)
+    public bool TryGetTimeSeries(string? topic, [MaybeNullWhen(false)] out ITimeSeries<T> timeSeries)
     {
+        topic ??= _options.DefaultTopic;
         return _timeSeriesCollection.TryGetValue(topic, out timeSeries);
     }
 

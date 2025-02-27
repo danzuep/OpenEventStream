@@ -1,6 +1,5 @@
 ﻿using OpenEventStream.Models;
-using OpenEventStream;
-using OpenEventStream.Abstractions;
+using OpenEventStream.Services;
 
 class Program
 {
@@ -10,11 +9,11 @@ class Program
         var timeSeriesBroker = new TimeSeriesBroker<string>(options);
 
         // Adding records to different topics
-        timeSeriesBroker.Add("Record 1A", "Topic A");
+        timeSeriesBroker.TryAdd("Topic A", "Record 1A");
         Thread.Sleep(2000);
-        timeSeriesBroker.Add("Record 2A", "Topic A");
+        timeSeriesBroker.TryAdd("Topic A", "Record 2A");
         Thread.Sleep(2000);
-        timeSeriesBroker.Add("Record 1B", "Topic B");
+        timeSeriesBroker.TryAdd("Topic B", "Record 1B");
 
         // Display records before checking
         Console.WriteLine("Records before checking:");
@@ -23,8 +22,8 @@ class Program
 
         // Check and remove old records with a threshold of 5 seconds
         Thread.Sleep(3000); // Wait for some records to expire
-        var removedRecordsA = timeSeriesBroker.RemoveExpired(TimeSpan.FromSeconds(5), "Topic A");
-        var removedRecordsB = timeSeriesBroker.RemoveExpired(TimeSpan.FromSeconds(5), "Topic B");
+        var removedRecordsA = timeSeriesBroker.RemoveExpired("Topic A", TimeSpan.FromSeconds(5));
+        var removedRecordsB = timeSeriesBroker.RemoveExpired("Topic B", TimeSpan.FromSeconds(5));
 
         // Display removed records
         Console.WriteLine("Removed records from Topic A:");

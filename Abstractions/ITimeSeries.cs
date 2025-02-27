@@ -1,9 +1,9 @@
-﻿namespace OpenEventStream.Abstractions;
-
-public interface ITimeSeries<T> : IEnumerable<KeyValuePair<DateTimeOffset, T>>
+﻿namespace OpenEventStream.Abstractions
 {
-    void Add(T value);
-    IList<T> RemoveExpired();
-    IList<T> RemoveExpired(TimeSpan threshold);
-    IReadOnlyDictionary<DateTimeOffset, T> ToReadOnlyDictionary();
+    public interface ITimeSeries<T> : IEnumerable<KeyValuePair<long, T>>
+    {
+        bool TryAdd(T value, TimeSpan? lockTimeout = null);
+        IList<T> RemoveExpired(TimeSpan? expiryThreshold = null, TimeSpan? lockTimeout = null);
+        IReadOnlyDictionary<long, T> ToReadOnlyDictionary();
+    }
 }
