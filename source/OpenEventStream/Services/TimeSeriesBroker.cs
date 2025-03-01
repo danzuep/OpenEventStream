@@ -37,6 +37,11 @@ public sealed class TimeSeriesBroker<T> : ITimeSeriesBroker<T>
         return timeSeries.TryAdd(value);
     }
 
+    public IList<T> RemoveExpired(TimeSpan expiryThreshold)
+    {
+        return RemoveExpired(null, expiryThreshold, null);
+    }
+
     public IList<T> RemoveExpired(string? topic = null, TimeSpan? expiryThreshold = null, TimeSpan? lockTimeout = null)
     {
         topic ??= _options.DefaultTopic;
@@ -45,6 +50,15 @@ public sealed class TimeSeriesBroker<T> : ITimeSeriesBroker<T>
             return timeSeries.RemoveExpired(expiryThreshold, lockTimeout);
         }
         return Array.Empty<T>();
+    }
+
+    public IReadOnlyList<T> GetAllRecords(string? topic = null)
+    {
+        if (TryGetTimeSeries(topic, out var partition))
+        {
+            return partition.Select(p => p.Value).ToArray();
+        }
+        return this.SelectMany(b => b.Select(p => p.Value)).ToArray();
     }
 
     public bool TryGetTimeSeries(string? topic, [MaybeNullWhen(false)] out ITimeSeries<T> timeSeries)

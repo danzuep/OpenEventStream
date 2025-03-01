@@ -1,0 +1,7 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\OpenEventStream\OpenEventStream.csproj" />
+    <Using Include="OpenEventStream.Models" />
+    <Using Include="OpenEventStream.Services" />
+  </ItemGroup>
+</Project>
