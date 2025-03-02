@@ -52,6 +52,7 @@ public class CacheServiceTests
         var result = _cacheService.GetOrAdd(key, k => value);
 
         // Assert
+        Assert.Equal(1, _cacheService.Count);
         Assert.Equal(value, result);
     }
 
@@ -103,5 +104,20 @@ public class CacheServiceTests
 
         // Assert
         Assert.DoesNotContain(key, expiredKeys);
+    }
+
+    [Fact]
+    public void Dispose_ShouldRemoveAllItems()
+    {
+        // Arrange
+        var key = "testKey";
+        var value = "testValue";
+        _cacheService.GetOrAdd(key, k => value);
+
+        // Act
+        _cacheService.Dispose();
+
+        // Assert
+        Assert.Equal(0, _cacheService.Count);
     }
 }

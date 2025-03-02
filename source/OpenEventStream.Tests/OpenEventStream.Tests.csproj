@@ -1,6 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <ProjectReference Include="..\OpenEventStream\OpenEventStream.csproj" />
+    <PackageReference Include="ZiggyCreatures.FusionCache" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" />
     <Using Include="OpenEventStream.Abstractions" />
     <Using Include="OpenEventStream.Models" />
     <Using Include="OpenEventStream.Services" />

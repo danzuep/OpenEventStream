@@ -1,5 +1,6 @@
 ﻿namespace OpenEventStream.Services;
 
+using System.Collections;
 using System.Collections.Concurrent;
 using OpenEventStream.Abstractions;
 using OpenEventStream.Models;
@@ -39,6 +40,38 @@ public sealed class CacheService<T> : ICacheService<T>
         return result;
     }
 
+    public T? GetOrAdd(string key, Func<T> valueFactory)
+    {
+        return GetOrAdd(key, _ => valueFactory());
+    }
+
+    public T? GetOrAdd(string key, T value)
+    {
+        return GetOrAdd(key, _ => value);
+    }
+
+    public bool TryGetValue(string key, out T? value)
+    {
+        return _cache.TryGetValue(key, out value);
+    }
+
+    public T? Get(string key)
+    {
+        return _cache[key];
+    }
+
+    public void Set(string key, T value)
+    {
+        _cache[key] = value;
+    }
+
+    public void Remove(string key)
+    {
+        _cache.Remove(key, out _);
+    }
+
+    public int Count => _cache.Count;
+
     public IList<string> Flush(TimeSpan? expiryThreshold = null)
     {
         return RemoveExpired(expiryThreshold).ToList();
@@ -49,7 +82,7 @@ public sealed class CacheService<T> : ICacheService<T>
         var expirationTicks = _lastExpired + _cacheOptions.Expiry.Ticks;
         if (_timestampProvider.Ticks > expirationTicks)
         {
-            _ = Flush();
+            _ = Flush(TimeSpan.Zero);
         }
     }
 
@@ -102,5 +135,26 @@ public sealed class CacheService<T> : ICacheService<T>
         }
 
         _timedLock.TryExecute(() => _recheck = oldest, _cacheOptions.Timeout, _lock);
+    }
+
+    public IEnumerator<KeyValuePair<string, T>> GetEnumerator()
+    {
+        foreach (var record in _cache)
+        {
+            yield return record;
+        }
+    }
+
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return GetEnumerator();
+    }
+
+    public void Dispose()
+    {
+        _cache.Clear();
+        _expiry.Clear();
+        _expired.Clear();
+        _recheck = null;
     }
 }

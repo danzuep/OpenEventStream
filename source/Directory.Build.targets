@@ -9,6 +9,8 @@
     <IsPublishable>false</IsPublishable>
     <IsTestProject>true</IsTestProject>
     <NoWarn>$(NoWarn);CA1707</NoWarn>
+    <!-- Enable central package management, https://learn.microsoft.com/en-us/nuget/consume-packages/Central-Package-Management -->
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
     <PackageReference Include="coverlet.collector">
