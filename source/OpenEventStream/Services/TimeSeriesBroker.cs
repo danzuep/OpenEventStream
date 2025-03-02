@@ -12,18 +12,20 @@ public sealed class TimeSeriesBroker<T> : ITimeSeriesBroker<T>
 {
     private readonly ConcurrentDictionary<string, ITimeSeries<T>> _timeSeriesCollection;
     private readonly TimeSeriesOptions _options;
+    private readonly ITimeSeriesFactory _timeSeriesFactory;
 
-    public TimeSeriesBroker(TimeSeriesOptions options)
+    public TimeSeriesBroker(TimeSeriesOptions? options = null, ITimeSeriesFactory? timeSeriesFactory = null)
     {
-        _options = options;
+        _options = options ?? new TimeSeriesOptions();
+        _timeSeriesFactory = timeSeriesFactory ?? new TimeSeriesFactory();
         _timeSeriesCollection = new ConcurrentDictionary<string, ITimeSeries<T>>();
-        _timeSeriesCollection.TryAdd(_options.DefaultTopic, new TimeSeries<T>());
+        _timeSeriesCollection.TryAdd(_options.DefaultTopic, _timeSeriesFactory.Create<T>());
     }
 
     public ITimeSeries<T> GetOrCreate(string? topic = null)
     {
         topic ??= _options.DefaultTopic;
-        return _timeSeriesCollection.GetOrAdd(topic, new TimeSeries<T>());
+        return _timeSeriesCollection.GetOrAdd(topic, _timeSeriesFactory.Create<T>());
     }
 
     public bool TryAdd(T value)
