@@ -27,7 +27,7 @@ namespace OpenEventStream.Models
 
         public DateTime LastUsed => new DateTime(_lastUsed);
 
-        public DateTime LastUpdated => new DateTime(_lastUsed);
+        public DateTime LastUpdated => new DateTime(_lastUpdated);
 
         public int AccessCount => _accessCount;
 
@@ -47,14 +47,14 @@ namespace OpenEventStream.Models
             }
         }
 
-        public bool TryUpdate([MaybeNullWhen(false)] out T value, TimeSpan? slidingExpiration = null)
+        public bool TryUpdate(TimeSpan? slidingExpiration = null)
         {
             var slidingLimit = _timestampProvider.Ticks - slidingExpiration?.Ticks ?? 0;
             if (slidingLimit > _lastUpdated)
             {
                 _lastUpdated = _timestampProvider.Ticks;
                 OnPropertyChanged(nameof(LastUpdated));
-                value = _valueFactory();
+                var value = _valueFactory();
                 lock (_key)
                 {
                     _value = value;
@@ -62,7 +62,6 @@ namespace OpenEventStream.Models
                 OnPropertyChanged(nameof(Value));
                 return true;
             }
-            value = default;
             return false;
         }
 
@@ -75,6 +74,9 @@ namespace OpenEventStream.Models
                 {
                     _value = default;
                 }
+                _lastUsed = 0;
+                _lastUpdated = 0;
+                _accessCount = 0;
                 OnPropertyChanged(nameof(Value));
                 return true;
             }

@@ -12,7 +12,7 @@ public sealed class AutoRefreshCacheService<T> : IEnumerable<CacheEntry<T>>
     private long _lastUpdated;
     private readonly Timer _updater;
     private readonly CacheOptions _cacheOptions;
-    private readonly ConcurrentQueue<CacheEntry<T>> _cache = new();
+    private readonly ConcurrentQueue<KeyValuePair<long, CacheEntry<T>>> _cache = new();
 
     private readonly ITimestampProvider _timestampProvider;
 
@@ -31,7 +31,7 @@ public sealed class AutoRefreshCacheService<T> : IEnumerable<CacheEntry<T>>
     {
         ArgumentNullException.ThrowIfNull(key, nameof(key));
         var cacheEntry = new CacheEntry<T>(key, valueFactory, _timestampProvider);
-        _cache.Enqueue(cacheEntry);
+        _cache.Enqueue(new(_timestampProvider.Ticks, cacheEntry));
         return cacheEntry.Value;
     }
 
@@ -48,32 +48,39 @@ public sealed class AutoRefreshCacheService<T> : IEnumerable<CacheEntry<T>>
 
     private IEnumerable<CacheEntry<T>> RefreshCache()
     {
-        var slidingLimit = _timestampProvider.Ticks - _cacheOptions.Timeout.Ticks;
-        if (slidingLimit > _lastUpdated)
-        {
-            _lastUpdated = _timestampProvider.Ticks;
-            while (_cache.TryPeek(out var oldest) &&
-                oldest.TryUpdate(out var cacheEntry, _cacheOptions.Timeout))
-            {
-                _cache.TryDequeue(out _);
-                Add(oldest.Key, () => cacheEntry);
-                yield return oldest;
-            }
-        }
+        return ProcessCacheEntries(update: true, (entry, expiration) => entry.TryUpdate(expiration));
     }
 
     private IEnumerable<CacheEntry<T>> RemoveExpired()
     {
-        var slidingLimit = _timestampProvider.Ticks - _cacheOptions.Expiry.Ticks;
-        if (slidingLimit > _lastExpired)
+        return ProcessCacheEntries(update: false, (entry, expiration) => entry.TryDispose(expiration));
+    }
+
+    private IEnumerable<CacheEntry<T>> ProcessCacheEntries(bool update, Func<CacheEntry<T>, TimeSpan, bool> processEntry)
+    {
+        var expiration = update ? _cacheOptions.Timeout : _cacheOptions.Expiry;
+        var slidingLimit = _timestampProvider.Ticks - expiration.Ticks;
+        if (slidingLimit > (update ? _lastUpdated : _lastExpired))
         {
-            _lastExpired = _timestampProvider.Ticks;
-            while (_cache.TryPeek(out var oldest) &&
-                oldest.TryDispose(_cacheOptions.Expiry))
+            if (update)
             {
-                _cache.TryDequeue(out _);
-                yield return oldest;
+                _lastUpdated = _timestampProvider.Ticks;
             }
+            else
+            {
+                _lastExpired = _timestampProvider.Ticks;
+            }
+            KeyValuePair<long, CacheEntry<T>> oldest;
+            while (_cache.TryDequeue(out oldest) && slidingLimit > oldest.Key && processEntry(oldest.Value, expiration))
+            {
+                if (update && !_cache.IsEmpty)
+                {
+                    _cache.Enqueue(new(_timestampProvider.Ticks, oldest.Value));
+                }
+                yield return oldest.Value;
+            }
+            if (!update && oldest.Value.TryUpdate(expiration)) { }
+            _cache.Enqueue(new(_timestampProvider.Ticks, oldest.Value));
         }
     }
 
@@ -81,7 +88,7 @@ public sealed class AutoRefreshCacheService<T> : IEnumerable<CacheEntry<T>>
     {
         foreach (var record in _cache)
         {
-            yield return record;
+            yield return record.Value;
         }
     }
 
